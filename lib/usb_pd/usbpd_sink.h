@@ -8,7 +8,7 @@
 #define CONFIG_PD_DEBUG_ENABLE
 
 // 虚拟 E-Marker
-// #define CONFIG_EMARKER_ENABLE
+#define CONFIG_EMARKER_ENABLE
 
 // EPR Mode
 #define CONFIG_EPR_MODE_ENABLE

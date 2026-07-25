@@ -925,10 +925,10 @@ static void usbpd_sink_state_process(void) {
 
             *(uint16_t *)&usbpd_tx_buffer[0] = header.d16;
             *(uint32_t *)&usbpd_tx_buffer[2] = 0x27170104;
-            *(uint32_t *)&usbpd_tx_buffer[6] = 0x09604EB9;
-            *(uint32_t *)&usbpd_tx_buffer[10] = 0xAD37E17B;
-            *(uint32_t *)&usbpd_tx_buffer[14] = 0xD6B2A4F2;
-            *(uint32_t *)&usbpd_tx_buffer[18] = 0xA3515984;
+            *(uint32_t *)&usbpd_tx_buffer[6] = 0x9E47C32;
+            *(uint32_t *)&usbpd_tx_buffer[10] = 0x760FB2FA;
+            *(uint32_t *)&usbpd_tx_buffer[14] = 0xCFC5843D;
+            *(uint32_t *)&usbpd_tx_buffer[18] = 0xF0716465;
 
             usbpd_sink_phy_send_data(usbpd_tx_buffer, (2 + 4 * 5), UPD_SOP0);
             pd_control_g.pd_state = MIPPS_STATE_WAIT_VDM_3;
@@ -944,10 +944,10 @@ static void usbpd_sink_state_process(void) {
 
             *(uint16_t *)&usbpd_tx_buffer[0] = header.d16;
             *(uint32_t *)&usbpd_tx_buffer[2] = 0x27170105;
-            *(uint32_t *)&usbpd_tx_buffer[6] = 0x7B00768F;
-            *(uint32_t *)&usbpd_tx_buffer[10] = 0x99722A0C;
-            *(uint32_t *)&usbpd_tx_buffer[14] = 0xBCD413B2;
-            *(uint32_t *)&usbpd_tx_buffer[18] = 0x6A7B7C56;
+            *(uint32_t *)&usbpd_tx_buffer[6] = 0x5C37CA4F;
+            *(uint32_t *)&usbpd_tx_buffer[10] = 0x1DA6BE17;
+            *(uint32_t *)&usbpd_tx_buffer[14] = 0xEA84728C;
+            *(uint32_t *)&usbpd_tx_buffer[18] = 0x52D51D9E;
 
             usbpd_sink_phy_send_data(usbpd_tx_buffer, (2 + 4 * 5), UPD_SOP0);
             pd_control_g.pd_state = MIPPS_STATE_WAIT_VDM_4;
@@ -979,10 +979,10 @@ static void usbpd_sink_state_process(void) {
 
             *(uint16_t *)&usbpd_tx_buffer[0] = header.d16;
             *(uint32_t *)&usbpd_tx_buffer[2] = 0x27170108;
-            *(uint32_t *)&usbpd_tx_buffer[6] = 0xC21EAB20;
-            *(uint32_t *)&usbpd_tx_buffer[10] = 0xD9B9A48D;
-            *(uint32_t *)&usbpd_tx_buffer[14] = 0x62327F59;
-            *(uint32_t *)&usbpd_tx_buffer[18] = 0x1C0788A5;
+            *(uint32_t *)&usbpd_tx_buffer[6] = 0xC36C20CC;
+            *(uint32_t *)&usbpd_tx_buffer[10] = 0x51578018;
+            *(uint32_t *)&usbpd_tx_buffer[14] = 0xBE4AFAC1;
+            *(uint32_t *)&usbpd_tx_buffer[18] = 0xBF4E91AB;
 
             usbpd_sink_phy_send_data(usbpd_tx_buffer, (2 + 4 * 5), UPD_SOP0);
             pd_control_g.pd_state = MIPPS_STATE_WAIT_VDM_6;
@@ -1361,7 +1361,7 @@ static void usbpd_sink_protocol_analysis_sop1(const uint8_t *rx_buffer, uint8_t 
                           (header.MessageHeader.NumberOfDataObjects == 0) &&
                           (header.MessageHeader.MessageType == USBPD_CONTROL_MSG_GOODCRC);
     if (!is_goodcrc_msg) {
-        usbpd_sink_send_goodcrc(header.MessageHeader.MessageID, false);
+        usbpd_sink_send_goodcrc(header.MessageHeader.MessageID, true);
     }
 
     // Non-Extended message

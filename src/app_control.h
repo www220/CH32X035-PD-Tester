@@ -35,6 +35,32 @@ typedef struct {
 } power_state_t;
 
 /**
+ * @brief 存储信息
+ */
+typedef struct {
+    uint8_t power_mode;             // 当前电源模式
+    uint8_t is_epr_ready;           // EPR 模式
+    uint8_t pdo_type;               // PDO 类型
+    uint8_t apdo_subtype;           // APDO 子类型
+    uint8_t qc_voltage;             // QC 电压档位
+    uint8_t rotate_mode;            // 当前旋转模式
+    uint16_t voltage;               // 当前协商电压
+
+    float vbus_calc_point[6];       // 校准的电压数据
+    uint32_t save_state_crc;        // CRC32校验数据
+} save_state_t;
+extern save_state_t* g_save_state;
+void Flash_Sync_State(void);
+void Flash_Write_State(void);
+uint32_t CRC32_Calculate(const uint8_t *data, int len);
+// 0x1      表示进入校准状态
+// 0x2      表示输出电压状态
+// 0x4      表示输出状态有变化点击按键应该修改变化
+// 0x8      表示已经同步flash诱骗状态
+// 0x10     表示旋转状态
+extern uint32_t save_state_flag;
+
+/**
  * @brief 初始化控制层
  */
 void app_control_init(void);

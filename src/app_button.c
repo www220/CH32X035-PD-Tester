@@ -66,7 +66,7 @@ static void bits_btn_result_cb(struct button_obj_t *btn, struct bits_btn_result 
     if (g_event_callback == NULL) return;
 
     // 单击事件
-    if (result.event == BTN_STATE_FINISH) {
+    if (result.event == BTN_STATE_FINISH && result.key_value == BITS_BTN_SINGLE_CLICK_KV) {
         switch (result.key_id) {
             case BTN_DOWN:
                 g_event_callback(BUTTON_EVENT_DOWN);
@@ -121,7 +121,12 @@ static void bits_btn_result_cb(struct button_obj_t *btn, struct bits_btn_result 
  */
 static void button_gpio_init(void) {
     GPIO_InitTypeDef GPIO_InitStructure = {0};
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOB, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_ResetBits(GPIOA, GPIO_Pin_6);
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_3 | GPIO_Pin_11;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
     GPIO_Init(GPIOB, &GPIO_InitStructure);

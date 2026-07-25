@@ -168,3 +168,7 @@ uint32_t adc_get_raw(void) {
 uint16_t adc_get_vbus_mv(void) {
     return adc_raw_to_vbus_mv(adc_get_raw());
 }
+
+// Calibration points must be sorted by measured value in ascending order
+// These values are obtained with calibration disabled
+CalibrationPoint VBUS_CAL_POINTS[6] = {{4500, 4580}, {8500, 8675}, {11500, 11750}, {14500, 14850}, {19500, 19970}, {27500, 28270}};

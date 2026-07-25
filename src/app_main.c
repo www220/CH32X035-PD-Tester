@@ -16,9 +16,10 @@
  * @brief 按键事件处理器（传递按键事件到 app_control / app_ui）
  */
 static void button_event_handler(button_event_t event) {
-    // 特殊处理：控制 UI 旋转
-    if (event == BUTTON_EVENT_DOWN_LONG) {
+    // 特殊处理：控制 UI 旋转（校准状态下作为确认按钮，输出状态下作为确认按钮）
+    if (event == BUTTON_EVENT_DOWN_LONG && !(save_state_flag & 0x1) && !(save_state_flag &0x2)) {
         app_ui_toggle_rotation();
+        if (save_state_flag & 0x10) save_state_flag &= ~0x10; else save_state_flag |= 0x10;
     }
     // 将按键事件传递给 app_control 处理
     app_control_handle_button(event);
@@ -34,7 +35,14 @@ int main(void) {
 
     // 初始化各层模块
     app_control_init();  // 此处包含 pd 初始化，需要尽量靠前，上电后需要抢在 E-Marker 前回复第一个 SOP1 VDM
-    app_ui_init();
+    if (g_save_state->rotate_mode) {
+        // 屏幕方向旋转
+        app_ui_toggle_rotation();
+        save_state_flag |= 0x10;
+    } else {
+        // 默认屏幕方向正常
+        app_ui_init();
+    }
     app_button_init(button_event_handler);
 
     while (1) {
@@ -47,7 +55,7 @@ int main(void) {
 
         // UI 更新
         static uint32_t last_ui_millis = 0;
-        if (millis() - last_ui_millis >= 50) {
+        if (millis() - last_ui_millis >= 100) {
             last_ui_millis = millis();
 
             // 从 app_control 获取状态
@@ -55,6 +63,19 @@ int main(void) {
 
             // 转换为 UI 数据格式
             ui_display_data_t ui_data = {0};
+            // 可以进入校准模式
+            if (state.vbus_voltage >= 30000) save_state_flag |= 0x1;
+            if ((state.power_mode == POWER_MODE_NONE) && (save_state_flag & 0x1)) strcpy(state.power_mode_name, "CAL");
+            // 输出功率时点亮输出灯
+            if (save_state_flag & 0x2) GPIO_SetBits(GPIOA, GPIO_Pin_6); else GPIO_ResetBits(GPIOA, GPIO_Pin_6);
+            // 读取flash参数同步诱骗参数
+            if ((g_save_state->power_mode && g_save_state->power_mode == state.power_mode)
+                && (g_save_state->power_mode == POWER_MODE_PD && g_save_state->is_epr_ready && state.is_epr_ready) 
+                && !(save_state_flag & 0x8)) {
+                // epr模式需要一点时间进入开机不会直接就同步成功
+                Flash_Sync_State();
+            }
+            //
             ui_data.vbus_voltage_mv = state.vbus_voltage;
             ui_data.negotiate_voltage_mv = state.negotiate_voltage;
             ui_data.negotiate_current_ma = state.negotiate_current;

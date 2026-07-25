@@ -105,10 +105,13 @@ void app_ui_toggle_rotation(void) {
 /**
  * @brief 更新 UI 显示
  */
-void app_ui_update(const ui_display_data_t *ui_display_data) {
+static uint8_t flush = 0;
+ void app_ui_update(const ui_display_data_t *ui_display_data) {
     if (ui_display_data == NULL) return;
 
     char buf[16];
+    u8g2_DrawStr(&u8g2, base_x + 0, base_y + 10, "VBUS");
+    u8g2_DrawStr(&u8g2, base_x + 20, base_y + 25, flush ? ">" : "<");
 
     // 更新 VBUS 电压
     format_milli_value(buf, sizeof(buf), ui_display_data->vbus_voltage_mv, 'V');
@@ -152,4 +155,5 @@ void app_ui_update(const ui_display_data_t *ui_display_data) {
 void app_ui_clear(void) {
     u8g2_ClearBuffer(&u8g2);
     u8g2_SendBuffer(&u8g2);
+    flush = !flush;
 }
