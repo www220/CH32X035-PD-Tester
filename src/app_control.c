@@ -164,8 +164,8 @@ void app_control_init(void) {
     memcpy(&flash_buf, (uint32_t *)address, sizeof(save_state_t));
     if (g_save_state->save_state_crc == CRC32_Calculate(flash_buf, sizeof(save_state_t) - 4)) {
         for (int i = 0; i < VBUS_CAL_POINTS_COUNT; i++) {
-            if (VBUS_CAL_POINTS[i].actual - 1000 <= g_save_state->vbus_calc_point[i] 
-                && g_save_state->vbus_calc_point[i] <= VBUS_CAL_POINTS[i].actual + 1000) {
+            if (VBUS_CAL_POINTS[i].actual - (VBUS_CAL_POINTS[i].actual<5000?50:950) <= g_save_state->vbus_calc_point[i] 
+                && g_save_state->vbus_calc_point[i] <= VBUS_CAL_POINTS[i].actual + 950) {
                 // 电压校准数据正确
                 VBUS_CAL_POINTS[i].measured = g_save_state->vbus_calc_point[i];
             }
@@ -734,9 +734,9 @@ void Flash_Write_State(void)
         g_save_state->voltage = state.negotiate_voltage;
     }
     // 存储当前的校准数据
-    float vbus_uncalibrated = (float)adc_get_raw() * VBUS_CONVERT_SCALE;
+    float vbus_uncalibrated = (float)adc_get_raw() * (float)adc_get_ref() * VBUS_CONVERT_SCALE;
     for (int i = 0; (state.power_mode == POWER_MODE_NONE) && (save_state_flag & 0x1) && (i < VBUS_CAL_POINTS_COUNT); i++) {
-        if (VBUS_CAL_POINTS[i].actual - 1000 <= vbus_uncalibrated && vbus_uncalibrated <= VBUS_CAL_POINTS[i].actual + 1000) {
+        if (VBUS_CAL_POINTS[i].actual - (VBUS_CAL_POINTS[i].actual<5000?50:950) <= vbus_uncalibrated && vbus_uncalibrated <= VBUS_CAL_POINTS[i].actual + 950) {
             // 校准时才能存储
             VBUS_CAL_POINTS[i].measured = g_save_state->vbus_calc_point[i] = vbus_uncalibrated;
             break;

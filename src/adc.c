@@ -26,7 +26,7 @@ void adc_init(void) {
     // Configure ADC
     ADC_DeInit(ADC1);
     ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;
-    ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+    ADC_InitStructure.ADC_ScanConvMode = ENABLE;
     ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
     ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
     ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
@@ -56,6 +56,7 @@ void adc_init(void) {
 
     // Configure ADC channel
     ADC_RegularChannelConfig(ADC1, ADC_CHANNEL, 1, ADC_SampleTime_11Cycles);
+    ADC_RegularChannelConfig(ADC1, REF_CHANNEL, 2, ADC_SampleTime_11Cycles);
 
     // Enable ADC DMA request
     ADC_DMACmd(ADC1, ENABLE);
@@ -91,7 +92,7 @@ static bool find_calibration_segment(float value, uint16_t *index) {
  * @return      VBUS voltage in mV
  */
 uint16_t adc_raw_to_vbus_mv(uint32_t adc_raw) {
-    float vbus_uncalibrated = (float)adc_raw * VBUS_CONVERT_SCALE;
+    float vbus_uncalibrated = (float)adc_raw * (float)adc_get_ref() * VBUS_CONVERT_SCALE;
 
 #if VBUS_CAL_ENABLE
     uint16_t segment_index;
@@ -143,10 +144,10 @@ uint16_t adc_raw_to_vbus_mv(uint32_t adc_raw) {
  * @param       None
  * @return      Oversampled ADC value
  */
-uint32_t adc_oversample(void) {
+uint32_t adc_oversample(int base) {
     uint32_t sum = 0;
     for (uint16_t i = 0; i < ADC_SAMPLE_COUNT; i++) {
-        sum += adc_buffer[i * ADC_CHANNEL_COUNT + 0];
+        sum += adc_buffer[i * ADC_CHANNEL_COUNT + base];
     }
     return sum >> ADC_OVERSAMPLE_BITS;  // Right shift 4 bits to get 16-bit value
 }
@@ -157,7 +158,17 @@ uint32_t adc_oversample(void) {
  * @return      ADC value
  */
 uint32_t adc_get_raw(void) {
-    return adc_oversample();
+    return adc_oversample(0);
+}
+
+/**
+ * @brief       Get REF value
+ * @param       None
+ * @return      REF value
+ */
+uint32_t adc_get_ref(void) {
+    uint32_t ref = INC_VREF_VOLTAGE*ADC_MAX_COUNT/adc_oversample(1);
+    return ref>=3300?3460:ref;
 }
 
 /**
@@ -171,4 +182,4 @@ uint16_t adc_get_vbus_mv(void) {
 
 // Calibration points must be sorted by measured value in ascending order
 // These values are obtained with calibration disabled
-CalibrationPoint VBUS_CAL_POINTS[6] = {{4500, 4580}, {8500, 8675}, {11500, 11750}, {14500, 14850}, {19500, 19970}, {27500, 28270}};
+CalibrationPoint VBUS_CAL_POINTS[8] = {{2500, 2500}, {3500, 3500}, {4500, 4500}, {8500, 8500}, {11500, 11500}, {14500, 14500}, {19500, 19500}, {27500, 27500}};

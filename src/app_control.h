@@ -45,8 +45,8 @@ typedef struct {
     uint8_t qc_voltage;             // QC 电压档位
     uint8_t rotate_mode;            // 当前旋转模式
     uint16_t voltage;               // 当前协商电压
-
-    float vbus_calc_point[6];       // 校准的电压数据
+    uint8_t rsv[8];                 // 保留字段
+    float vbus_calc_point[8];       // 校准的电压数据
     uint32_t save_state_crc;        // CRC32校验数据
 } save_state_t;
 extern save_state_t* g_save_state;
