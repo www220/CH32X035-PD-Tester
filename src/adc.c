@@ -182,4 +182,4 @@ uint16_t adc_get_vbus_mv(void) {
 
 // Calibration points must be sorted by measured value in ascending order
 // These values are obtained with calibration disabled
-CalibrationPoint VBUS_CAL_POINTS[8] = {{2500, 2500}, {3500, 3500}, {4500, 4500}, {8500, 8500}, {11500, 11500}, {14500, 14500}, {19500, 19500}, {27500, 27500}};
+CalibrationPoint VBUS_CAL_POINTS[8] = {{3500, 3500}, {4500, 4500}, {8500, 8500}, {11500, 11500}, {14500, 14500}, {19500, 19500}, {23500, 23500}, {27500, 27500}};

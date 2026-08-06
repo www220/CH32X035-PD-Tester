@@ -185,6 +185,7 @@ typedef struct {
 
     uint8_t port_data_role;          // 0b UFP, 1b DFP
     bool mipps_is_drswap_requested;  // MIPPS 尚未发送 drswap
+    uint8_t mipps_type;              // 多种的MIPPS类型
 } pd_control_t;
 
 /******************************************************************************

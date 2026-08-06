@@ -114,6 +114,7 @@ static void usbpd_sink_state_reset(void) {
 
     pd_control_g.port_data_role = 0;
     pd_control_g.mipps_is_drswap_requested = 0;
+    pd_control_g.mipps_type = 0;
 }
 
 static void usbpd_sink_soft_reset_recover(void) {
@@ -146,6 +147,7 @@ static void usbpd_sink_soft_reset_recover(void) {
     pd_control_g.pps_periodic_timer = 0;
     pd_control_g.mipps_timeout_timer = 0;
     pd_control_g.mipps_is_drswap_requested = 0;
+    pd_control_g.mipps_type = 0;
 }
 
 static void usbpd_sink_phy_send_data(const uint8_t *tx_buffer, uint8_t tx_length, uint8_t sop) {
@@ -645,6 +647,8 @@ static void usbpd_sink_pdos_analyse(const uint32_t *pdos, uint8_t pdo_count, boo
                 pdo->fixed.voltage = voltage;
                 pdo->fixed.current = current;
                 pdo->fixed.epr_capable = pdo_parser.Fixed.EPRCapable;
+                // 明显这个是个电脑的PD就不要再申请小米的pps了
+                if (voltage >= 18900 && voltage <= 19900) pd_control_g.mipps_is_drswap_requested = true;
 
                 pd_printf("%s Fixed: %dmV, %dmA%s\n", voltage <= 20000 ? "SPR" : "EPR", voltage, current, pdo_parser.Fixed.EPRCapable ? " (EPR Capable)" : "");
                 break;
@@ -925,10 +929,17 @@ static void usbpd_sink_state_process(void) {
 
             *(uint16_t *)&usbpd_tx_buffer[0] = header.d16;
             *(uint32_t *)&usbpd_tx_buffer[2] = 0x27170104;
-            *(uint32_t *)&usbpd_tx_buffer[6] = 0x9E47C32;
-            *(uint32_t *)&usbpd_tx_buffer[10] = 0x760FB2FA;
-            *(uint32_t *)&usbpd_tx_buffer[14] = 0xCFC5843D;
-            *(uint32_t *)&usbpd_tx_buffer[18] = 0xF0716465;
+            if (pd_control_g.mipps_type == 1) {
+                *(uint32_t *)&usbpd_tx_buffer[6] = 0x6019B457;
+                *(uint32_t *)&usbpd_tx_buffer[10] = 0xCD77FD5F;
+                *(uint32_t *)&usbpd_tx_buffer[14] = 0xEDFFDC3D;
+                *(uint32_t *)&usbpd_tx_buffer[18] = 0x0ED06106;
+            } else {
+                *(uint32_t *)&usbpd_tx_buffer[6] = 0x9E47C32;
+                *(uint32_t *)&usbpd_tx_buffer[10] = 0x760FB2FA;
+                *(uint32_t *)&usbpd_tx_buffer[14] = 0xCFC5843D;
+                *(uint32_t *)&usbpd_tx_buffer[18] = 0xF0716465;
+            }
 
             usbpd_sink_phy_send_data(usbpd_tx_buffer, (2 + 4 * 5), UPD_SOP0);
             pd_control_g.pd_state = MIPPS_STATE_WAIT_VDM_3;
@@ -944,10 +955,17 @@ static void usbpd_sink_state_process(void) {
 
             *(uint16_t *)&usbpd_tx_buffer[0] = header.d16;
             *(uint32_t *)&usbpd_tx_buffer[2] = 0x27170105;
-            *(uint32_t *)&usbpd_tx_buffer[6] = 0x5C37CA4F;
-            *(uint32_t *)&usbpd_tx_buffer[10] = 0x1DA6BE17;
-            *(uint32_t *)&usbpd_tx_buffer[14] = 0xEA84728C;
-            *(uint32_t *)&usbpd_tx_buffer[18] = 0x52D51D9E;
+            if (pd_control_g.mipps_type == 1) {
+                *(uint32_t *)&usbpd_tx_buffer[6] = 0x4FA9C15A;
+                *(uint32_t *)&usbpd_tx_buffer[10] = 0x26BD8C37;
+                *(uint32_t *)&usbpd_tx_buffer[14] = 0x0AC48831;
+                *(uint32_t *)&usbpd_tx_buffer[18] = 0xAC8F7407;
+            } else {
+                *(uint32_t *)&usbpd_tx_buffer[6] = 0x5C37CA4F;
+                *(uint32_t *)&usbpd_tx_buffer[10] = 0x1DA6BE17;
+                *(uint32_t *)&usbpd_tx_buffer[14] = 0xEA84728C;
+                *(uint32_t *)&usbpd_tx_buffer[18] = 0x52D51D9E;
+            }
 
             usbpd_sink_phy_send_data(usbpd_tx_buffer, (2 + 4 * 5), UPD_SOP0);
             pd_control_g.pd_state = MIPPS_STATE_WAIT_VDM_4;
@@ -979,10 +997,17 @@ static void usbpd_sink_state_process(void) {
 
             *(uint16_t *)&usbpd_tx_buffer[0] = header.d16;
             *(uint32_t *)&usbpd_tx_buffer[2] = 0x27170108;
-            *(uint32_t *)&usbpd_tx_buffer[6] = 0xC36C20CC;
-            *(uint32_t *)&usbpd_tx_buffer[10] = 0x51578018;
-            *(uint32_t *)&usbpd_tx_buffer[14] = 0xBE4AFAC1;
-            *(uint32_t *)&usbpd_tx_buffer[18] = 0xBF4E91AB;
+            if (pd_control_g.mipps_type == 1) {
+                *(uint32_t *)&usbpd_tx_buffer[6] = 0x7BAB43A0;
+                *(uint32_t *)&usbpd_tx_buffer[10] = 0xC7CA58DE;
+                *(uint32_t *)&usbpd_tx_buffer[14] = 0xC688D161;
+                *(uint32_t *)&usbpd_tx_buffer[18] = 0x57AE4E1B;
+            } else {
+                *(uint32_t *)&usbpd_tx_buffer[6] = 0xC36C20CC;
+                *(uint32_t *)&usbpd_tx_buffer[10] = 0x51578018;
+                *(uint32_t *)&usbpd_tx_buffer[14] = 0xBE4AFAC1;
+                *(uint32_t *)&usbpd_tx_buffer[18] = 0xBF4E91AB;
+            }
 
             usbpd_sink_phy_send_data(usbpd_tx_buffer, (2 + 4 * 5), UPD_SOP0);
             pd_control_g.pd_state = MIPPS_STATE_WAIT_VDM_6;
@@ -1247,6 +1272,11 @@ static void usbpd_sink_protocol_analysis_sop0(const uint8_t *rx_buffer, uint8_t 
                             if (vdm_header.command == VDM_COMMAND_DISCOVER_IDENTITY) {
                                 // Discover Identity ACK does not carry SVID list.
                                 pd_control_g.pd_state = MIPPS_STATE_SEND_VDM_REQ_DISCOVER_SVIDS;
+                                if (header.MessageHeader.NumberOfDataObjects >= 3) {
+                                    // 小米的各种型号的类型判断
+                                    if (rx_buffer[14]==0x75 && rx_buffer[15]==0xA5 && rx_buffer[16]==0x00 && rx_buffer[17]==0x00) pd_control_g.mipps_type = 1;
+                                    else pd_control_g.mipps_type = 0;
+                                }
                                 break;
                             }
 
