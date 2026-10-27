@@ -7,81 +7,11 @@
 // 调试打印
 #define CONFIG_PD_DEBUG_ENABLE
 
-// 虚拟 E-Marker
-#define CONFIG_EMARKER_ENABLE
-
-// EPR Mode
-#define CONFIG_EPR_MODE_ENABLE
-
-// 硬件最高电压限制 (mV)
-#define CONFIG_HW_MAX_VOLTAGE (36000)  // TODO: 发送请求时 FPDO 已限制，其他类型 APDO 尚未实现限制，应该还需在更新 pd_available_pdos_t 时做限制
-
-// 不应小于 5V
-#if CONFIG_HW_MAX_VOLTAGE < 5000
-#undef CONFIG_HW_MAX_VOLTAGE
-#define CONFIG_HW_MAX_VOLTAGE 5000
-#endif
-
 #ifdef CONFIG_PD_DEBUG_ENABLE
 #define pd_printf(format, ...) LOG(format, ##__VA_ARGS__)
 #else
 #define pd_printf(x...)
 #endif
-
-// USB_PD_R3_2 V1.1 2024-10.pdf (Page 260, 6.6.21.2 SinkEPRKeepAlive Timer)
-// tSinkEPRKeepAlive (min:0.250s nom:0.375s max:0.500s)
-#define tSinkEPRKeepAlive (500 - 50)
-
-// USB_PD_R3_2 V1.1 2024-10.pdf (Page 259, 6.6.19.1 SinkPPSPeriodic Timer)
-// tPPSRequest (max:10s)
-#define tPPSRequest (10000 - 50)
-
-// MIPPS wait timeout
-#define tMIPPS_Timeout (1000)
-
-// 用于存储可用的 PDO 以供后续发送请求使用
-typedef struct {
-    uint32_t raw;          // PDO 原始数据
-    uint8_t position;      // PDO Position
-    uint8_t pdo_type;      // PDO 类型
-    uint8_t apdo_subtype;  // APDO 子类型
-
-    union {
-        // Fixed Supply PDO
-        struct {
-            uint16_t voltage;      // 电压 (mV)
-            uint16_t current;      // 电流 (mA)
-            uint16_t epr_capable;  // 是否支持 EPR
-        } fixed;
-
-        // SPR PPS APDO
-        struct {
-            uint16_t min_voltage;  // 最小电压 (mV)
-            uint16_t max_voltage;  // 最大电压 (mV)
-            uint16_t current;      // 电流 (mA)
-        } pps;
-
-        // SPR AVS APDO
-        struct {
-            uint16_t min_voltage;          // 最小电压 (mV)
-            uint16_t max_voltage;          // 最大电压 (mV)
-            uint16_t max_current_9v_15v;   // 9-15V 最大电流 (mA)
-            uint16_t max_current_15v_20v;  // 15-20V 最大电流 (mA)
-        } spr_avs;
-
-        // EPR AVS APDO
-        struct {
-            uint16_t min_voltage;  // 最小电压 (mV)
-            uint16_t max_voltage;  // 最大电压 (mV)
-            uint16_t pdp;          // 功率 (W)
-        } epr_avs;
-    };
-} pd_pdo_t;
-
-typedef struct {
-    pd_pdo_t pdo[11];   // 最多 11 个 PDO
-    uint8_t pdo_count;  // PDO 计数
-} pd_available_pdos_t;
 
 // PD 状态机
 // TODO: 按照 Table 8.154 Policy Engine States 规范命名 PE_SNK_XXX
@@ -91,101 +21,19 @@ typedef enum {
     PD_STATE_CHECK_CONNECT,
     PD_STATE_CONNECT,
 
-    PD_STATE_RECEIVED_SPR_SOURCE_CAP,
-    PD_STATE_SEND_SPR_REQUEST,
-    PD_STATE_WAIT_ACCEPT,
-    PD_STATE_WAIT_PS_RDY,
-    PD_STATE_RECEIVED_PS_RDY,
-
-    PD_STATE_SEND_EPR_ENTER,
-    PD_STATE_WAIT_EPR_ENTER_RESPONSE,
-    PD_STATE_WAIT_EPR_MODE_SOURCE_CAP,
-    PD_STATE_RECEIVED_EPR_SOURCE_CAP,
-    PD_STATE_SEND_EPR_SRC_CAP_REQ_CHUNK,
-    PD_STATE_SEND_EPR_REQUEST,
-    PD_STATE_WAIT_EPR_KEEP_ALIVE_ACK,
-
-    PD_STATE_SEND_NOT_SUPPORTED,
-    PD_STATE_SEND_REJECT,
-
-    PD_STATE_SEND_VDM_NAK_DISCOVER_IDENTITY,  // 回复 DISCOVER IDENTITY REQ
-    PD_STATE_SEND_VDM_NAK_DISCOVER_SVIDS,     // 回复 DISCOVER SVIDS REQ
-
-    MIPPS_STATE_SEND_DRSWAP,
-    MIPPS_STATE_WAIT_DRSWAP_ACCEPT,  // set control_g.port_data_role = 1
-
-    MIPPS_STATE_SEND_VDM_REQ_DISCOVER_IDENTITY,  // 发完直接 PD_STATE_IDLE 防止不回复卡住状态机
-    // MIPPS_STATE_WAIT_VDM_ACK_DISCOVER_IDENTITY,
-
-    MIPPS_STATE_SEND_VDM_REQ_DISCOVER_SVIDS,  // 发完直接 PD_STATE_IDLE 防止不回复卡住状态机
-    // MIPPS_STATE_WAIT_VDM_ACK_DISCOVER_SVIDS,  // 收到 DISCOVER_SVIDS ACK 时判断 SVID == 0x2717
-
-    // 如果 VDM1 到 VDM7 等待超时，直接 PD_STATE_IDLE
-    // 如果 VDM1 到 VDM7 期间，收到 NOT_SUPPORTED 则忽略跳转到下个发送状态
-    MIPPS_STATE_SEND_VDM_1,  // 0x27170101
-    MIPPS_STATE_WAIT_VDM_1,
-
-    MIPPS_STATE_SEND_VDM_2,  // 0x27170103
-    MIPPS_STATE_WAIT_VDM_2,
-
-    MIPPS_STATE_SEND_VDM_3,  // 0x27170104 0x09604EB9 0xAD37E17B 0xD6B2A4F2 0xA3515984
-    MIPPS_STATE_WAIT_VDM_3,
-
-    MIPPS_STATE_SEND_VDM_4,  // 0x27170105 0x7B00768F 0x99722A0C 0xBCD413B2 0x6A7B7C56
-    MIPPS_STATE_WAIT_VDM_4,
-
-    MIPPS_STATE_SEND_VDM_5,  // 0x27170106 0x00000001
-    MIPPS_STATE_WAIT_VDM_5,
-
-    MIPPS_STATE_SEND_VDM_6,  // 0x27170108 0xC21EAB20 0xD9B9A48D 0x62327F59 0x1C0788A5
-    MIPPS_STATE_WAIT_VDM_6,
-
-    MIPPS_STATE_SEND_VDM_7,  // 0x27170107 0x00000001
-    MIPPS_STATE_WAIT_VDM_7,  // TODO: 可能需要 drswap 回来再发 get_src_cap
-
-    MIPPS_STATE_SEND_GET_SRC_CAP,
-    MIPPS_STATE_WAIT_SRC_CAP,
-
     PD_STATE_IDLE,
 } pd_state_t;
 
-// 判断是否是 MIPPS Unstructured VDM 等待回复状态
-#define IS_MIPPS_UVDM_WAIT_STATE(state) (                                                                          \
-    (state) == MIPPS_STATE_WAIT_VDM_1 || (state) == MIPPS_STATE_WAIT_VDM_2 || (state) == MIPPS_STATE_WAIT_VDM_3 || \
-    (state) == MIPPS_STATE_WAIT_VDM_4 || (state) == MIPPS_STATE_WAIT_VDM_5 || (state) == MIPPS_STATE_WAIT_VDM_6 || \
-    (state) == MIPPS_STATE_WAIT_VDM_7)
-
 typedef struct {
-    volatile bool is_ready;                               // PD 是否已就绪（已发送第一次电源请求，并且 Source 已回复 RS_RDY）
     volatile USBPD_SpecificationRevision_t pd_version;    // PD Specification Revision，需在收到 Source_Capabilities 后设置为和 Source 相同的 version
     volatile pd_state_t pd_state;                         // PD 状态机当前状态
     volatile pd_state_t pd_last_state;                    // PD 状态机之前状态
-    volatile uint8_t pdo_pos;                             // 当前选择的 PDO Position
-    volatile uint16_t pdo_voltage_mv;                     // 当前选择的 PDO 电压 (mV)，用于传递 APDO 电压
-    pd_available_pdos_t available_pdos;                   // 用于存储可用的 PDO 以供后续发送请求使用
-    uint32_t spr_source_cap_buffer[7];                    // SPR Source Capability 缓冲区（SPR 最多 7 个 PDO）
-    volatile uint8_t spr_source_cap_buffer_pdo_count;     // SPR Source Capability 缓冲区中的 PDO 数量
-    uint32_t epr_source_cap_buffer[11];                   // EPR Source Capability 缓冲区（EPR 最多 11 个 PDO）
-    volatile uint8_t epr_source_cap_buffer_pdo_count;     // TODO: 可删除，直接使用 size // EPR Source Capability 缓冲区中的 PDO 数量
-    volatile uint8_t epr_source_cap_buffer_size;          // EPR Source Capability 缓冲区大小（用于分块接收）
-    volatile uint8_t epr_source_cap_buffer_chunk_number;  // EPR Source Capability 缓冲区正在接收的分块号
     volatile uint8_t cc_none_times;                       // cc 未连接计数
     volatile uint8_t cc1_connect_times;                   // cc1 检测计数
     volatile uint8_t cc2_connect_times;                   // cc2 检测计数
     volatile uint8_t sink_message_id;                     // Sink 消息 ID
     volatile uint8_t cable_message_id;                    // Cable 消息 ID，用于模拟 E-Marker
-    volatile bool sink_goodcrc_over;                      // TODO: 暂未使用，待删除 // 已回复 GoodCRC（需在回复 GoodCRC 后标记 true，需在收到非 GoodCRC 消息时标记 false）在发送前等待 true，发送后设为 false
-    volatile bool source_goodcrc_over;                    // TODO: 暂未使用，待删除 // 已收到 GoodCRC（需在收到 GoodCRC 消息时标记 true，需在发送非 GoodCRC 消息后标记 false）
-    volatile bool is_epr_ready;                           // EPR 是否已进入成功
-    volatile bool source_epr_capable;                     // Source 是否支持 EPR
-    volatile bool cable_epr_capable;                      // Cable 是否支持 EPR
-    volatile uint32_t epr_keepalive_timer;                // SinkEPRKeepAliveTimer 定时器，需在收到和回复 GoodCRC 后重置，超时 tSinkEPRKeepAlive 需发送 EPR Keep Alive
-    volatile uint32_t pps_periodic_timer;                 // SinkPPSPeriodicTimer 定时器，需在收到和回复 GoodCRC 后重置，超时 tPPSRequest 需重新发送 SPR Request
-    volatile uint32_t mipps_timeout_timer;                // MIPPS 超时定时器
-
-    uint8_t port_data_role;          // 0b UFP, 1b DFP
-    bool mipps_is_drswap_requested;  // MIPPS 尚未发送 drswap
-    uint8_t mipps_type;              // 多种的MIPPS类型
+    volatile uint8_t port_data_role;                      // 0b UFP, 1b DFP
 } pd_control_t;
 
 /******************************************************************************
@@ -198,77 +46,6 @@ typedef struct {
 void usbpd_sink_init(void);
 
 /**
- * @brief 获取 PD 通信就绪状态 (已发送第一次电源请求，并且 Source 已回复 RS_RDY)
- */
-bool usbpd_sink_get_ready(void);
-
-/**
- * @brief 获取 EPR Mode 就绪状态
- */
-bool usbpd_sink_get_epr_ready(void);
-
-/**
- * @brief 调试打印 available_pdos
- */
-void usbpd_sink_debug_available_pdos(void);
-
-/**
- * @brief Get the available PDOs (Power Data Objects)
- * @return pd_available_pdos_t Structure containing the available PDOs.
- */
-const pd_available_pdos_t *usbpd_sink_get_available_pdos(void);
-
-/**
- * @brief 获取当前 Position
- * @return uint8_t Position (1-based), 如果未连接或无效则返回 0
- */
-uint8_t usbpd_sink_get_position(void);
-
-/**
- * @brief 设置 Fixed Supply PDO Position
- * @param position Position (1-based)
- * @return true 成功
- * @return false 失败
- */
-bool usbpd_sink_set_fpdo_position(uint8_t position);
-
-/**
- * @brief 设置 APDO Position 并指定电压
- * @param position Position (1-based)
- * @param voltage_mv 请求的电压 (mV)，必须在 PDO 的 min_voltage 和 max_voltage 范围内，且符合步进要求
- * @return true 成功
- * @return false 失败
- */
-bool usbpd_sink_set_apdo_position_with_voltage(uint8_t position, uint16_t voltage_mv);
-
-/**
  * @brief 发送 HARD_RESET
  */
 void usbpd_sink_hard_reset(void);
-
-/**
- * @brief 获取当前 PDO
- * @param pdo_type PDO 类型
- * @return true 成功
- * @return false 失败
- */
-bool usbpd_sink_get_current_pdo_type(USBPD_PDO_Type_t *pdo_type, USBPD_APDO_Subtype_t *apdo_subtype);
-
-/**
- * @brief 获取当前 PDO 类型和 APDO 子类型
- * @param pdo_type PDO 类型
- * @param apdo_subtype APDO 子类型
- * @return true 成功
- * @return false 失败
- */
-bool usbpd_sink_get_current_pdo_type(USBPD_PDO_Type_t *pdo_type, USBPD_APDO_Subtype_t *apdo_subtype);
-
-/**
- * @brief 查找功率最高的 PDO
- * @param position 返回 PDO 的位置 (1-based)
- * @param voltage_mv 返回 PDO 的电压 (mV)，对于 APDO，返回其最高电压
- * @param is_fpdo 返回是否是 Fixed Supply PDO
- * @return true 找到
- * @return false 未找到
- */
-bool usbpd_sink_find_max_power_pdo(uint8_t *position, uint16_t *voltage_mv, bool *is_fpdo);
